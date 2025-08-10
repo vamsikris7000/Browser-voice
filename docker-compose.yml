@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  browser-voice:
+    build: .
+    ports:
+      - "5000:5000"  # Twilio webhook
+      - "5001:5001"  # Proxy server
+      - "8081:8081"  # WebSocket bridge
+    environment:
+      - LIVEKIT_URL=${LIVEKIT_URL}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - CARTESIA_API_KEY=${CARTESIA_API_KEY}
+      - CHATBOT_API_URL=${CHATBOT_API_URL}
+      - CHATBOT_API_KEY=${CHATBOT_API_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+    volumes:
+      - ./public:/app/public  # Serve static files
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a simple web server for the public files
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./public:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - browser-voice
+    restart: unless-stopped
+    profiles:
+      - web-server
